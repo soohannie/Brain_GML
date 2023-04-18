@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 from torch.optim import lr_scheduler
 from torch_geometric.loader import DataLoader
+from torch_geometric.transforms import SVDFeatureReduction
 from tensorboardX import SummaryWriter
 
 from imports.ABIDEDataset import ABIDEDataset
@@ -29,6 +30,8 @@ def main(args):
     writer = SummaryWriter(os.path.join('./log', args.exp_name))
 
     # Dataset and Dataloader
+    # svd_transform = SVDFeatureReduction(out_channels=200)
+    # dataset = ABIDEDataset(root=args.data_path, name='ABIDE Dataset', transform=svd_transform, pre_transform=None)
     dataset = ABIDEDataset(root=args.data_path, name='ABIDE Dataset', transform=None, pre_transform=None)
     dataset.data.y = dataset.data.y.squeeze() 
     dataset.data.x[dataset.data.x == float('inf')] = 0
@@ -108,8 +111,6 @@ def train(train_loader, val_loader, test_loader, optimizer, scheduler, model, cr
             pred = out.max(dim=1)[1]
             correct += pred.eq(data.y).sum().item()
         val_accuracy = correct / len(val_loader.dataset)
-        writer.add_scalar('val_acc', val_accuracy, epoch)
-
         # TEST ACCURACY IS CALCULATED only to observe the difference between val and test accuracies, and not actively used for picking the best performing model.
         # Only validation accuracy is used to pick the best model and save the model.
         correct = 0
@@ -119,7 +120,6 @@ def train(train_loader, val_loader, test_loader, optimizer, scheduler, model, cr
             pred = out.max(dim=1)[1]
             correct += pred.eq(data.y).sum().item()
         test_accuracy = correct / len(test_loader.dataset)
-        writer.add_scalar('test_acc', test_accuracy, epoch)
 
         if val_loss < best:
             best = val_loss
@@ -137,6 +137,7 @@ def train(train_loader, val_loader, test_loader, optimizer, scheduler, model, cr
                 epoch=epoch, batch_time=end, training_loss=training_loss, val_loss=val_loss, val_accuracy=val_accuracy, test_accuracy=test_accuracy))
         
         writer.add_scalars('Acc',{'val_acc':val_accuracy},  epoch)
+        writer.add_scalars('Acc', {'test_acc':test_accuracy}, epoch)
         writer.add_scalars('Loss', {'train_loss': training_loss, 'val_loss': val_loss},  epoch)
     
     return best_model_wts
@@ -158,7 +159,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='fMRI GML Project')
     parser.add_argument('--data_path', type=str, default='/home/soohan/projects/Brain_GML/data/ABIDE_pcp/cpac/filt_noglobal')
     parser.add_argument('--n_epochs', type=int, default=150, help='number of epochs of training')
-    parser.add_argument('--bs', type=int, default=32, help='size of the batches')
+    parser.add_argument('--bs', type=int, default=64, help='size of the batches')
     parser.add_argument('--lr', type = float, default=0.01, help='learning rate')
     parser.add_argument('--stepsize', type=int, default=20, help='scheduler step size')
     parser.add_argument('--gamma', type=float, default=0.5, help='scheduler shrinking rate')
@@ -168,8 +169,8 @@ if __name__ == '__main__':
     parser.add_argument('--nclass', type=int, default=2, help='num of classes') # Binary Autism Disease Classification
     parser.add_argument('--save_model', type=bool, default=True)
     parser.add_argument('--save_path', type=str, default='./saved_models/', help='path to save model')
-    parser.add_argument('--model', type=str, default='GATV2', choices=['GCN', 'GAT', 'GATV2', 'GRAPHSAGE','GIN'], help='Choice of Model.')
+    parser.add_argument('--model', type=str, default='GAT', choices=['GCN', 'GAT', 'GATV2', 'GRAPHSAGE','GIN'], help='Choice of Model.')
     parser.add_argument('--criterion', type=str, default='NLL', choices=['NLL','CE'])
-    parser.add_argument('--exp_name', type=str, default='GATV2')
+    parser.add_argument('--exp_name', type=str, default='GAT')
     args = parser.parse_args()
     main(args)

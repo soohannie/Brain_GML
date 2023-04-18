@@ -1,4 +1,6 @@
 '''
+Referenced from Xiaoxiao Li, Yuan Zhou, Nicha Dvornek, Muhan Zhang, Siyuan Gao, Juntang Zhuang, Dustin Scheinost, Lawrence H. Staib, Pamela Ventola, James S. Duncan,
+BrainGNN: Interpretable Brain Graph Neural Network for fMRI Analysis, Medical Image Analysis
 Author: Xiaoxiao Li
 Date: 2019/02/24
 '''
@@ -20,8 +22,6 @@ from torch_sparse import coalesce
 from torch_geometric.utils import remove_self_loops
 from functools import partial
 import deepdish as dd
-from imports.gdc import GDC
-
 
 def split(data, batch):
     node_slice = torch.cumsum(torch.from_numpy(np.bincount(batch)), 0)
@@ -153,21 +153,7 @@ def read_sigle_data(data_dir,filename,use_gdc =False):
 
     data = Data(x=att_torch, edge_index=edge_index.long(), y=y_torch, edge_attr=edge_att)
 
-    if use_gdc:
-        '''
-        Implementation of https://papers.nips.cc/paper/2019/hash/23c894276a2c5a16470e6a31f4618d73-Abstract.html
-        '''
-        data.edge_attr = data.edge_attr.squeeze()
-        gdc = GDC(self_loop_weight=1, normalization_in='sym',
-                  normalization_out='col',
-                  diffusion_kwargs=dict(method='ppr', alpha=0.2),
-                  sparsification_kwargs=dict(method='topk', k=20,
-                                             dim=0), exact=True)
-        data = gdc(data)
-        return data.edge_attr.data.numpy(),data.edge_index.data.numpy(),data.x.data.numpy(),data.y.data.item(),num_nodes
-
-    else:
-        return edge_att.data.numpy(),edge_index.data.numpy(),att,label,num_nodes
+    return edge_att.data.numpy(),edge_index.data.numpy(),att,label,num_nodes
 
 if __name__ == "__main__":
     data_dir = '/home/soohan/projects/Brain_GML/data/ABIDE_pcp/cpac/filt_noglobal/raw'

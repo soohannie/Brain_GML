@@ -1,3 +1,7 @@
+'''
+Program is referenced from Improving Multi-Site Autism Classification via Site-Dependence Minimization and Second-Order Functional Connectivity, IEEE Transactions on Medical Imaging
+'''
+
 # Copyright (c) 2019 Mwiza Kunda
 #
 # This program is free software: you can redistribute it and/or modify
