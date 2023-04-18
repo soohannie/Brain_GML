@@ -46,8 +46,8 @@ def main(args):
         model = GCN(args.inp_dim, args.nclass, hidden_channels=32, dropout=0.5)
     elif args.model=='GAT':
         model = GAT(args.inp_dim, args.nclass, hidden_channels=32, n_heads=10, dropout=0.5)
-    elif args.model=='GATv2':
-        model = GATV2(args.inp_dim, args.nclass, hidden_channels=32, n_heads=10, dropout=0.5)
+    elif args.model=='GATV2':
+        model = GATV2(args.inp_dim, args.nclass, hidden_channels=32, n_heads=2, dropout=0.6)
     elif args.model=='GRAPHSAGE':
         model = GraphSAGE(args.inp_dim, args.nclass, hidden_channels=32, dropout=0.5)
     elif args.model=='GIN':
@@ -67,7 +67,7 @@ def main(args):
     # Train and validate model
     start_time = time.time()
     print(f'Training Model {args.model}.')
-    best_model = train(train_loader, val_loader, optimizer, scheduler, model, criterion, device, writer, args)
+    best_model = train(train_loader, val_loader, test_loader, optimizer, scheduler, model, criterion, device, writer, args)
     print(f'Finished Training. Time taken: {time.time()-start_time}')
 
     model.load_state_dict(best_model)
@@ -75,7 +75,7 @@ def main(args):
     test_accuracy = test(test_loader, model, device)
     print("Test Acc: {:.7f} ".format(test_accuracy))
 
-def train(train_loader, val_loader, optimizer, scheduler, model, criterion, device, writer, args):
+def train(train_loader, val_loader, test_loader, optimizer, scheduler, model, criterion, device, writer, args):
     best = 999999999
     for epoch in range(args.n_epochs):
         # Train ---------------------------------
@@ -103,10 +103,23 @@ def train(train_loader, val_loader, optimizer, scheduler, model, criterion, devi
             data = data.to(device)
             out = model(x=data.x, edge_index=data.edge_index, edge_attr=data.edge_attr, batch=data.batch)
             loss = criterion(out, data.y)
+            writer.add_scalar('val_loss', loss, epoch*len(train_loader)+step)
             val_loss += loss.item() * data.num_graphs
             pred = out.max(dim=1)[1]
             correct += pred.eq(data.y).sum().item()
         val_accuracy = correct / len(val_loader.dataset)
+        writer.add_scalar('val_acc', val_accuracy, epoch)
+
+        # TEST ACCURACY IS CALCULATED only to observe the difference between val and test accuracies, and not actively used for picking the best performing model.
+        # Only validation accuracy is used to pick the best model and save the model.
+        correct = 0
+        for data in test_loader:
+            data = data.to(device)
+            out = model(x=data.x, edge_index=data.edge_index, edge_attr=data.edge_attr, batch=data.batch)
+            pred = out.max(dim=1)[1]
+            correct += pred.eq(data.y).sum().item()
+        test_accuracy = correct / len(test_loader.dataset)
+        writer.add_scalar('test_acc', test_accuracy, epoch)
 
         if val_loss < best:
             best = val_loss
@@ -119,8 +132,9 @@ def train(train_loader, val_loader, optimizer, scheduler, model, criterion, devi
                 'Time: {batch_time:.3f}\t'
                 'Train Loss: {training_loss:.4f}\t'
                 'Val Loss: {val_loss:.4f}\t'
-                'Val Accuracy: {val_accuracy:.3f}\t'.format(
-                epoch=epoch, batch_time=end, training_loss=training_loss, val_loss=val_loss, val_accuracy=val_accuracy))
+                'Val Accuracy: {val_accuracy:.3f}\t'
+                'Test Accuracy: {test_accuracy:.3f}\t'.format(
+                epoch=epoch, batch_time=end, training_loss=training_loss, val_loss=val_loss, val_accuracy=val_accuracy, test_accuracy=test_accuracy))
         
         writer.add_scalars('Acc',{'val_acc':val_accuracy},  epoch)
         writer.add_scalars('Loss', {'train_loss': training_loss, 'val_loss': val_loss},  epoch)
@@ -144,7 +158,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='fMRI GML Project')
     parser.add_argument('--data_path', type=str, default='/home/soohan/projects/Brain_GML/data/ABIDE_pcp/cpac/filt_noglobal')
     parser.add_argument('--n_epochs', type=int, default=150, help='number of epochs of training')
-    parser.add_argument('--bs', type=int, default=64, help='size of the batches')
+    parser.add_argument('--bs', type=int, default=32, help='size of the batches')
     parser.add_argument('--lr', type = float, default=0.01, help='learning rate')
     parser.add_argument('--stepsize', type=int, default=20, help='scheduler step size')
     parser.add_argument('--gamma', type=float, default=0.5, help='scheduler shrinking rate')

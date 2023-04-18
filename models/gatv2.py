@@ -20,15 +20,11 @@ class GATV2(nn.Module):
         self.gc2.reset_parameters()
 
     def forward(self,  x, edge_index, edge_attr, batch):
-        x = F.dropout(x, p=self.dropout, training=self.training)
+
+        # No ReLU / dropout layers as these functionn are already included in torch_geometric.nn.GATv2Conv
         x = self.gc1(x, edge_index)
-        x = F.elu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.gc2(x, edge_index)
-        x = F.elu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.gc3(x, edge_index)
-        x = F.elu(x)
         x = global_mean_pool(x, batch)
         x = self.linear(x)
         return F.log_softmax(x, dim=1)
