@@ -17,9 +17,9 @@ from imports.utils import train_val_test_split
 
 from models.gcn import GCN
 from models.gat import GAT
+from models.gatv2 import GATV2
 from models.graphsage import GraphSAGE
 from models.gin import GIN
-from models.braingnn.braingnn import Network
 
 def main(args):
     torch.manual_seed(2)
@@ -46,6 +46,8 @@ def main(args):
         model = GCN(args.inp_dim, args.nclass, hidden_channels=32, dropout=0.5)
     elif args.model=='GAT':
         model = GAT(args.inp_dim, args.nclass, hidden_channels=32, n_heads=10, dropout=0.5)
+    elif args.model=='GATv2':
+        model = GATV2(args.inp_dim, args.nclass, hidden_channels=32, n_heads=10, dropout=0.5)
     elif args.model=='GRAPHSAGE':
         model = GraphSAGE(args.inp_dim, args.nclass, hidden_channels=32, dropout=0.5)
     elif args.model=='GIN':
@@ -152,8 +154,8 @@ if __name__ == '__main__':
     parser.add_argument('--nclass', type=int, default=2, help='num of classes') # Binary Autism Disease Classification
     parser.add_argument('--save_model', type=bool, default=True)
     parser.add_argument('--save_path', type=str, default='./saved_models/', help='path to save model')
-    parser.add_argument('--model', type=str, default='GIN', choices=['GCN', 'GAT', 'GRAPHSAGE','GIN'], help='Choice of Model.')
+    parser.add_argument('--model', type=str, default='GATV2', choices=['GCN', 'GAT', 'GATV2', 'GRAPHSAGE','GIN'], help='Choice of Model.')
     parser.add_argument('--criterion', type=str, default='NLL', choices=['NLL','CE'])
-    parser.add_argument('--exp_name', type=str, default='GIN')
+    parser.add_argument('--exp_name', type=str, default='GATV2')
     args = parser.parse_args()
     main(args)
